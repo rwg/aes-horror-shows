@@ -1,0 +1,35 @@
+===============
+= DESCRIPTION =
+===============
+
+This is an implementation of single block AES-128 encryption for AppleScript.
+
+It will encrypt a single block (16 bytes) of plaintext using a 128-bit (16 byte)
+key, then print a representation of the state for the entire encryption process
+to the console.
+
+
+=========
+= USAGE =
+=========
+
+Use the OS X osascript utility to execute the AppleScript program:
+
+% osascript aes128-encrypt.applescript <plaintext in hex> <key in hex>
+
+The plaintext and key must each be 16 bytes of data, encoded in hexadecimal (32
+hexadecimal characters).  You may use commands such as the following to obtain
+the hexadecimal representations of arbitrary strings:
+
+% printf 'WE ALL LIVE IN A' | xxd -ps
+574520414c4c204c49564520494e2041
+
+% printf 'YELLOW SUBMARINE' | xxd -ps
+59454c4c4f57205355424d4152494e45
+
+You may combine the hexadecimal encoding process with the osascript command as
+follows (in a POSIX-compatible shell):
+
+% osascript aes128-encrypt.applescript \
+	$(printf 'WE ALL LIVE IN A' | xxd -ps) \
+	$(printf 'YELLOW SUBMARINE' | xxd -ps)
