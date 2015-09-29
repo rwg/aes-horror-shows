@@ -1,0 +1,40 @@
+===============
+= DESCRIPTION =
+===============
+
+This is an implementation of single block AES-128 encryption for PostScript.
+
+It will encrypt a single block (16 bytes) of plaintext using a 128-bit (16 byte)
+key, then print a representation of the state for the entire encryption process
+to the console.  (This state representation is inspired by Appendix B of FIPS
+Publication 197.)
+
+
+=========
+= USAGE =
+=========
+
+The aes128-encrypt.ps.in file must be edited to insert the 16-byte plaintext and
+encryption key into the source code.  Additionally, the plaintext and encryption
+key must be hexadecimal encoded (32 hexadecimal digits each).
+
+First, determine the hexadecimal encodings of your plaintext and encryption key
+with commands such as the following:
+
+% printf 'WE ALL LIVE IN A' | xxd -ps
+574520414c4c204c49564520494e2041
+
+% printf 'YELLOW SUBMARINE' | xxd -ps
+59454c4c4f57205355424d4152494e45
+
+Then use a command such as the following to create aes128-encrypt.ps from
+aes128-encrypt.ps.in by replacing "PLAINTEXT" and "KEY" in the original file
+with the hexadecimal encoded plaintext and encryption key found previously:
+
+% perl -p -e 's/PLAINTEXT/574520414c4c204c49564520494e2041/;' \
+	-e 's/KEY/59454c4c4f57205355424d4152494e45/;' \
+	< aes128-encrypt.ps.in > aes128-encrypt.ps
+
+Any PostScript Level 2 RIP should be able to execute the PostScript program and
+render its output.  Testing was performed using an Apple LaserWriter 12/640 PS
+laser printer and Preview.app on OS X.

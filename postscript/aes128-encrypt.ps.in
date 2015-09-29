@@ -1,0 +1,730 @@
+%!PS-Adobe-3.0
+%%BoundingBox: 0 0 612 792
+%%DocumentData: Clean7Bit
+%%DocumentNeededResources: font Helvetica Helvetica-Bold Courier Courier-Bold Symbol
+%%LanguageLevel: 2
+%%Orientation: Portrait
+%%Pages: 2
+%%Title: (single block AES-128 encryption)
+%%EndComments
+
+%%BeginDefaults
+%%PageResources: font Helvetica Helvetica-Bold Courier Courier-Bold Symbol
+%%EndDefaults
+
+%%BeginProlog
+%%EndProlog
+
+%%BeginSetup
+
+%%% BEGIN CONFIGURABLE STUFF %%%
+
+% plaintext must be a hexadecimal string representing exactly 16 bytes
+
+/plaintext <PLAINTEXT> def
+
+% key must be a hexadecimal string representing exactly 16 bytes
+
+/key <KEY> def
+
+%%% END CONFIGURABLE STUFF %%%
+
+%%% BEGIN "CONSTANTS" %%%
+
+% multiplication by 2 in GF(2)
+
+/galoismult2
+  0   2   4   6   8  10  12  14  16  18  20  22  24  26  28  30
+ 32  34  36  38  40  42  44  46  48  50  52  54  56  58  60  62
+ 64  66  68  70  72  74  76  78  80  82  84  86  88  90  92  94
+ 96  98 100 102 104 106 108 110 112 114 116 118 120 122 124 126
+128 130 132 134 136 138 140 142 144 146 148 150 152 154 156 158
+160 162 164 166 168 170 172 174 176 178 180 182 184 186 188 190
+192 194 196 198 200 202 204 206 208 210 212 214 216 218 220 222
+224 226 228 230 232 234 236 238 240 242 244 246 248 250 252 254
+ 27  25  31  29  19  17  23  21  11   9  15  13   3   1   7   5
+ 59  57  63  61  51  49  55  53  43  41  47  45  35  33  39  37
+ 91  89  95  93  83  81  87  85  75  73  79  77  67  65  71  69
+123 121 127 125 115 113 119 117 107 105 111 109  99  97 103 101
+155 153 159 157 147 145 151 149 139 137 143 141 131 129 135 133
+187 185 191 189 179 177 183 181 171 169 175 173 163 161 167 165
+219 217 223 221 211 209 215 213 203 201 207 205 195 193 199 197
+251 249 255 253 243 241 247 245 235 233 239 237 227 225 231 229
+256 packedarray def
+
+% multiplication by 3 in GF(2)
+
+/galoismult3
+  0   3   6   5  12  15  10   9  24  27  30  29  20  23  18  17
+ 48  51  54  53  60  63  58  57  40  43  46  45  36  39  34  33
+ 96  99 102 101 108 111 106 105 120 123 126 125 116 119 114 113
+ 80  83  86  85  92  95  90  89  72  75  78  77  68  71  66  65
+192 195 198 197 204 207 202 201 216 219 222 221 212 215 210 209
+240 243 246 245 252 255 250 249 232 235 238 237 228 231 226 225
+160 163 166 165 172 175 170 169 184 187 190 189 180 183 178 177
+144 147 150 149 156 159 154 153 136 139 142 141 132 135 130 129
+155 152 157 158 151 148 145 146 131 128 133 134 143 140 137 138
+171 168 173 174 167 164 161 162 179 176 181 182 191 188 185 186
+251 248 253 254 247 244 241 242 227 224 229 230 239 236 233 234
+203 200 205 206 199 196 193 194 211 208 213 214 223 220 217 218
+ 91  88  93  94  87  84  81  82  67  64  69  70  79  76  73  74
+107 104 109 110 103 100  97  98 115 112 117 118 127 124 121 122
+ 59  56  61  62  55  52  49  50  35  32  37  38  47  44  41  42
+ 11   8  13  14   7   4   1   2  19  16  21  22  31  28  25  26
+256 packedarray def
+
+% the 16 hexadecimal digits
+
+/hexnibbles
+(0) (1) (2) (3) (4) (5) (6) (7) (8) (9) (a) (b) (c) (d) (e) (f)
+16 packedarray def
+
+% the round constants
+
+/rcon
+141 1 2 4 8 16 32 64 128 27 54
+11 packedarray def
+
+% the 16x16 Rijndael S-box
+
+/sbox
+  99 124 119 123 242 107 111 197  48   1 103  43 254 215 171 118
+ 202 130 201 125 250  89  71 240 173 212 162 175 156 164 114 192
+ 183 253 147  38  54  63 247 204  52 165 229 241 113 216  49  21
+   4 199  35 195  24 150   5 154   7  18 128 226 235  39 178 117
+   9 131  44  26  27 110  90 160  82  59 214 179  41 227  47 132
+  83 209   0 237  32 252 177  91 106 203 190  57  74  76  88 207
+ 208 239 170 251  67  77  51 133  69 249   2 127  80  60 159 168
+  81 163  64 143 146 157  56 245 188 182 218  33  16 255 243 210
+ 205  12  19 236  95 151  68  23 196 167 126  61 100  93  25 115
+  96 129  79 220  34  42 144 136  70 238 184  20 222  94  11 219
+ 224  50  58  10  73   6  36  92 194 211 172  98 145 149 228 121
+ 231 200  55 109 141 213  78 169 108  86 244 234 101 122 174   8
+ 186 120  37  46  28 166 180 198 232 221 116  31  75 189 139 138
+ 112  62 181 102  72   3 246  14  97  53  87 185 134 193  29 158
+ 225 248 152  17 105 217 142 148 155  30 135 233 206  85  40 223
+ 140 161 137  13 191 230  66 104  65 153  45  15 176  84 187  22
+256 packedarray def
+
+% the indices for ShiftRows
+
+/shiftrowsindices
+0 5 10 15 4 9 14 3 8 13 2 7 12 1 6 11
+16 packedarray def
+
+%%% END "CONSTANTS" %%%
+
+%%% BEGIN PROCEDURES %%%
+
+% array arraytohex string
+% 
+% Converts an array of integers to a string containing the array's hexadecimal
+% representation.
+
+/arraytohex {
+ 1 dict begin
+ dup length			% stack: array length
+ dup 2 mul string		% stack: array length string
+ /output exch def		% stack: array length
+
+ % fill output with '?'
+ % 0 1 output length 1 sub { output exch 63 put } for
+
+ 1 sub 0 1			% stack: array (length-1) 0 1
+ 3 -1 roll			% stack: array 0 1 (length-1) 
+ {				% stack: array i
+  dup				% stack: array i i
+  2 index exch			% stack: array i array i
+  get				% stack: array i array[i]
+  inttohex			% stack: array i hex
+  exch 2 mul exch		% stack: array (i*2) hex
+  output 3 1 roll		% stack: array output (i*2) hex
+  putinterval			% stack: array
+ } for
+
+ pop output			% stack: output
+ end
+} def
+
+% array xoffset yoffset draw4x4box -
+% 
+% Draws the 1-inch square 4x4 boxes.  xoffset and yoffset are for the
+% upper-left corner of the box, in inches from the upper left corner.
+
+/draw4x4box {
+ 4 dict begin
+
+ /cury exch 72 mul def
+ /curx exch 72 mul def
+ /nums exch def
+
+ /fontsize 10 def
+
+ gsave
+
+ 0 setlinecap
+ 0 setlinejoin
+
+ /Courier-Bold fontsize selectfont
+
+ % hex numbers
+
+ 0 1 15 {
+  dup dup			% stack: i i i
+  nums exch get inttohex dup	% stack: i i hex hex
+  stringwidth pop 2 div         % stack: i i hex (strwidth/2)
+  3 -1 roll			% stack: i hex (strwidth/2) i
+  4 idiv 0.25 mul 0.125 add	% stack: i hex (strwidth/2) x_offset_temp
+  72 mul exch sub		% stack: i hex (strwidth/2) x_offset_temp
+  curx add			% stack: i hex x_offset
+  3 -1 roll			% stack: hex x_offset i
+  4 mod 0.25 mul		% stack: hex x_offset y_offset_temp
+  72 mul cury add		% stack: hex x_offset y_offset_temp
+  fontsize 1.2 mul add		% stack: hex x_offset y_offset
+  toll moveto show
+ } for
+ 
+ % interior gray lines
+
+ 0.5 setlinewidth
+ 0.5 setgray
+
+ 1 1 3 {
+  dup
+
+  18 mul curx add cury toll moveto
+  0 -72 rlineto
+
+  18 mul cury add curx exch toll moveto
+  72 0 rlineto
+ } for
+ stroke
+
+ % black outline
+ 
+ 1.0 setlinewidth
+ 0.0 setgray
+
+ curx cury toll moveto
+ 72 0 rlineto
+ 0 -72 rlineto
+ -72 0 rlineto
+ closepath
+ stroke
+
+ grestore
+
+ end
+} def
+
+% yoffset drawcolumnheaders -
+%
+% Draws the column headers.  yoffset is in inches from the top of the page.
+
+/drawcolumnheaders {
+ 4 dict begin
+
+ /cury exch 72 mul def
+
+ /fontsize 11 def
+
+ /drawcolheader {
+  exch
+
+  dup stringwidth pop 2 div
+  curx exch sub
+  cury
+  toll moveto show
+
+  dup stringwidth pop 2 div
+  curx exch sub
+  cury 10 add
+  toll moveto show
+ } def
+
+ /Helvetica-Bold fontsize selectfont
+
+ /cury cury fontsize add def
+
+ /curx 1.125 72 mul def
+ (Round) (Number) drawcolheader
+
+ /curx 2.0 72 mul def
+ (Start of) (Round) drawcolheader
+
+ /curx 3.25 72 mul def
+ (After) (SubBytes) drawcolheader
+
+ /curx 4.5 72 mul def
+ (After) (ShiftRows) drawcolheader
+
+ /curx 5.75 72 mul def
+ (After) (MixColumns) drawcolheader
+
+ /curx 7.0 72 mul def
+ (Round Key) (Value) drawcolheader
+
+ end
+} def
+
+% pagenum drawpagefooter -
+% 
+% Draws the page number in the footer.
+
+/drawpagefooter {
+ 1 dict begin
+ 
+ /fontsize 11 def
+
+ gsave
+
+ /Helvetica fontsize selectfont
+
+ 1 string cvs dup
+ stringwidth pop
+ 8.5 2 div 72 mul exch sub
+ 10.25 72 mul fontsize sub
+ toll moveto show
+
+ grestore
+
+ end
+} def
+
+% yoffset drawplaintextandkey -
+% 
+% Draws the plaintext and key headers.  yoffset is in inches from the top of
+% the page.
+
+/drawplaintextandkey {
+ 2 dict begin
+
+ /cury exch def
+
+ /fontsize 11 def
+
+ gsave
+
+ /Helvetica-Bold fontsize selectfont
+
+ (Plaintext:) dup stringwidth pop
+ 1.0 72 mul exch sub 0.75 72 mul add
+ cury 72 mul 1 fontsize mul add
+ toll moveto show
+
+ (Key:) dup stringwidth pop
+ 1.0 72 mul exch sub 0.75 72 mul add
+ cury 72 mul 2 fontsize mul add
+ toll moveto show
+
+ (Ciphertext:) dup stringwidth pop
+ 1.0 72 mul exch sub 0.75 72 mul add
+ cury 72 mul 3 fontsize mul add
+ toll moveto show
+
+ /Courier fontsize selectfont
+
+ plaintext arraytohex
+ 1.75 72 mul
+ cury 72 mul 1 fontsize mul add
+ toll moveto ( ) show show
+
+ key arraytohex
+ 1.75 72 mul
+ cury 72 mul 2 fontsize mul add
+ toll moveto ( ) show show
+
+ ciphertext arraytohex
+ 1.75 72 mul
+ cury 72 mul 3 fontsize mul add
+ toll moveto ( ) show show
+ grestore
+
+ end
+} def
+
+% rownum drawrow -
+% 
+% Draws a row, including the round number, 4x4 boxes, xor symbol, and equals
+% sign.
+
+/drawrow {
+ 8 dict begin
+
+ /roundkey exch def
+ /mixcolumns exch def
+ /shiftrows exch def
+ /subbytes exch def
+ /startofround exch def
+ /rownum exch def
+
+ /cury rownum 6 mod 1.25 mul 2.0 add def
+ /fontsize 11 def
+ 
+ gsave
+ 
+ % draw round number
+
+ /Helvetica fontsize selectfont
+ 
+ rownum 0 eq { (input) } if
+ rownum 11 eq { (output) } if
+ rownum 0 gt rownum 11 lt and { rownum 2 string cvs } if
+ 
+ dup stringwidth pop
+ 2 div 0.75 0.75 2 div add 72 mul exch sub
+ cury 0.5 add 72 mul fontsize 0.3 mul add
+ toll moveto show
+
+ % draw 4x4 boxes
+
+ startofround 1.5 cury draw4x4box
+ rownum 0 gt rownum 11 lt and { subbytes 2.75 cury draw4x4box } if
+ rownum 0 gt rownum 11 lt and { shiftrows 4.0 cury draw4x4box } if
+ rownum 0 gt rownum 10 lt and { mixcolumns 5.25 cury draw4x4box } if
+ rownum 11 lt { roundkey 6.5 cury draw4x4box } if
+
+ % draw xor symbol and equals signs
+
+ rownum 11 lt {
+  /Symbol fontsize selectfont
+ 
+  <c5> dup
+  stringwidth pop
+  2 div 6.25 0.25 2 div add 72 mul exch sub
+  cury 0.5 add 72 mul fontsize 0.3 mul add
+  toll moveto show
+
+  /Helvetica fontsize selectfont
+
+  (=) dup
+  stringwidth pop
+  2 div 7.5 0.25 2 div add 72 mul exch sub
+  cury 0.5 add 72 mul fontsize 0.3 mul add
+  toll moveto show
+ } if
+
+ grestore
+ 
+ end
+} def
+
+% int inttohex string
+% 
+% Converts an integer (0 <= i <= 255) to its hexadecimal representation.
+
+/inttohex {
+ 1 dict begin
+
+ /output 2 string def
+
+ dup				% stack: i i
+ hexnibbles exch		% stack: i hexnibbles i
+ 16 idiv get			% stack: i upper
+ 0 exch				% stack: i 0 upper
+ output 3 1 roll		% stack: i output 0 upper
+ putinterval			% stack: i
+ hexnibbles exch		% stack: hexnibbles i
+ 16 mod get			% stack: lower
+ 1 exch				% stack: 1 lower
+ output 3 1 roll		% stack: output 1 lower
+ putinterval
+
+ output
+
+ end
+} def
+
+% string stringtoarray array
+% 
+% Converts a binary string to an array of bytes (integers).
+
+/stringtoarray { [ exch {} forall ] } def
+
+% x y toll x' y'
+% 
+% Converts coordinates (x, y) from a coordinate space where the origin is the
+% upper-left corner of the page to one where the origin is the lower-left
+% corner of the page.
+
+/toll { 792 exch sub } def
+
+% array1 array2 xorarray array
+% 
+% Exclusive-ors the corresponding values in two arrays together.
+
+/xorarray {
+ 2 dict begin
+
+ /a2 exch def
+ /a1 exch def
+
+ [
+  0 1 a1 length 1 sub {
+   dup				% stack: i i
+   a1 exch get exch		% stack: a1[i] i
+   a2 exch get			% stack: a1[i] a2[i]
+   xor
+  } for
+ ]
+
+ end
+} def
+
+% array MixColumns array
+
+/MixColumns {
+ 2 dict begin
+
+ /a exch def
+
+ [
+  0 4 15 {
+   /n exch def
+
+   galoismult2 a n 0 add get get
+   galoismult3 a n 1 add get get
+   a n 2 add get
+   a n 3 add get
+   xor xor xor
+
+   a n 0 add get
+   galoismult2 a n 1 add get get
+   galoismult3 a n 2 add get get
+   a n 3 add get
+   xor xor xor
+
+   a n 0 add get
+   a n 1 add get
+   galoismult2 a n 2 add get get
+   galoismult3 a n 3 add get get
+   xor xor xor
+
+   galoismult3 a n 0 add get get
+   a n 1 add get
+   a n 2 add get
+   galoismult2 a n 3 add get get
+   xor xor xor
+  } for
+ ]
+
+ end
+} def
+
+% array roundnum RoundKey array
+
+/RoundKey {
+ 5 dict begin
+
+ /roundnum exch def
+
+ /newkey 32 array def
+ newkey 0
+ 3 -1 roll
+ putinterval
+
+ 16 4 31 {
+  /n exch def
+
+  n 16 eq {
+   /offsets 3 2 1 4 4 packedarray def
+
+   0 1 3 {
+    /x exch def
+
+    newkey n x add
+
+    newkey n x add 16 sub get
+    sbox newkey n offsets x get sub get get
+    xor
+
+    x 0 eq {
+     rcon roundnum get
+     xor
+    } if
+
+    put
+   } for
+  } {
+   0 1 3 {
+    /x exch def
+
+    newkey n x add
+
+    newkey n x add 16 sub get
+    newkey n x add 4 sub get
+    xor
+
+    put
+   } for
+  } ifelse
+ } for
+
+ newkey 16 16 getinterval
+
+ end
+} def
+
+% array ShiftRows array
+
+/ShiftRows {
+ 1 dict begin
+
+ /a exch def
+
+ [
+  shiftrowsindices {
+   a exch get
+  } forall
+ ]
+
+ end
+} def
+
+% array SubBytes array
+
+/SubBytes {
+ 1 dict begin
+
+ /a exch def
+
+ [
+  0 1 a length 1 sub {
+   a exch get			% stack: a[i]
+   sbox exch get		% stack: sbox[a[i]]
+  } for
+ ]
+
+ end
+} def
+
+%%% END PROCEDURES %%%
+
+/plaintext plaintext stringtoarray def
+/key key stringtoarray def
+
+% compute the state and the round keys
+
+/startofround 12 array def
+/aftersubbytes 12 array def
+/aftershiftrows 12 array def
+/aftermixcolumns 12 array def
+/roundkeys 12 array def
+
+0 1 11 {
+ 1 dict begin
+
+ /roundnum exch def
+
+ startofround roundnum
+ roundnum 0 eq {
+  plaintext
+ } {
+  aftermixcolumns roundnum 1 sub get
+  roundkeys roundnum 1 sub get
+  xorarray
+ } ifelse
+ put
+
+ aftersubbytes roundnum
+ startofround roundnum get
+ roundnum 0 gt roundnum 11 lt and {
+  SubBytes
+ } if
+ put
+
+ aftershiftrows roundnum
+ aftersubbytes roundnum get
+ roundnum 0 gt roundnum 11 lt and {
+  ShiftRows
+ } if
+ put
+
+ aftermixcolumns roundnum
+ aftershiftrows roundnum get
+ roundnum 0 gt roundnum 10 lt and {
+  MixColumns
+ } if
+ put
+
+ roundkeys roundnum
+ roundnum 0 eq {
+  key
+ } if
+ roundnum 0 gt roundnum 11 lt and {
+  roundkeys roundnum 1 sub get
+  roundnum RoundKey
+ } if
+ roundnum 11 eq {
+  null
+ } if
+ put
+
+ end
+} for
+
+/ciphertext startofround 11 get def
+
+<< /PageSize [ 612 792 ] >> setpagedevice
+
+%%EndSetup
+
+%%Page: 1 1
+
+%%BeginPageSetup
+save
+%%EndPageSetup
+
+0.75 drawplaintextandkey
+1.5 drawcolumnheaders
+
+0 1 5 {
+ dup startofround exch get
+ 1 index
+ aftersubbytes exch get
+ 2 index
+ aftershiftrows exch get
+ 3 index
+ aftermixcolumns exch get
+ 4 index
+ roundkeys exch get
+ drawrow
+} for
+
+1 drawpagefooter
+
+restore
+showpage
+
+%%PageTrailer
+
+%%Page: 2 2
+
+%%BeginPageSetup
+save
+%%EndPageSetup
+
+0.75 drawplaintextandkey
+1.5 drawcolumnheaders
+
+6 1 11 {
+ dup startofround exch get
+ 1 index
+ aftersubbytes exch get
+ 2 index
+ aftershiftrows exch get
+ 3 index
+ aftermixcolumns exch get
+ 4 index
+ roundkeys exch get
+ drawrow
+} for
+
+2 drawpagefooter
+
+restore
+showpage
+
+%%PageTrailer
+
+%%EOF
