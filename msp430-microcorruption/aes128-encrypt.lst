@@ -1,0 +1,1457 @@
+
+aes128-encrypt:     file format elf32-msp430
+
+
+Disassembly of section .text:
+
+00004400 <__watchdog_support>:
+    4400:	b2 40 80 5a 5c 01 	mov	#23168,	&0x015c	;#0x5a80
+
+00004406 <__init_stack>:
+    4406:	31 40 00 44       	mov	#17408,	r1	;#0x4400
+
+0000440a <__do_copy_data>:
+    440a:	3f 40 00 00       	mov	#0,	r15	;#0x0000
+    440e:	0f 93             	tst	r15		
+    4410:	05 24             	jz	$+12     	;abs 0x441c
+    4412:	2f 83             	decd	r15		
+    4414:	9f 4f aa 4d 00 24 	mov	19882(r15),9216(r15);0x4daa(r15), 0x2400(r15)
+    441a:	fb 23             	jnz	$-8      	;abs 0x4412
+
+0000441c <__do_clear_bss>:
+    441c:	3f 40 00 00       	mov	#0,	r15	;#0x0000
+    4420:	0f 93             	tst	r15		
+    4422:	04 24             	jz	$+10     	;abs 0x442c
+    4424:	1f 83             	dec	r15		
+    4426:	cf 43 00 24       	mov.b	#0,	9216(r15);r3 As==00, 0x2400(r15)
+    442a:	fc 23             	jnz	$-6      	;abs 0x4424
+
+0000442c <main>:
+
+.section .init9, "ax", @progbits
+.global main
+
+main:
+    sub #54, r1                     ; 0(r1) - 17(r1): plaintext + '\0'
+    442c:	31 80 36 00       	sub	#54,	r1	;#0x0036
+                                    ; 18(r1) - 35(r1): key + '\0'
+                                    ; 36(r1) - 53(r1): ciphertext (no '\0')
+
+    ; get plaintext
+
+    mov #c__plaintext_prompt, r15
+    4430:	3f 40 7a 4c       	mov	#19578,	r15	;#0x4c7a
+    call #print_string
+    4434:	b0 12 40 49       	call	#0x4940	
+
+    mov r1, r15
+    4438:	0f 41             	mov	r1,	r15	
+    call #get_16
+    443a:	b0 12 b4 48       	call	#0x48b4	
+
+    ; get key
+
+    mov #c__key_prompt, r15
+    443e:	3f 40 91 4c       	mov	#19601,	r15	;#0x4c91
+    call #print_string
+    4442:	b0 12 40 49       	call	#0x4940	
+
+    mov r1, r15
+    4446:	0f 41             	mov	r1,	r15	
+    add #18, r15
+    4448:	3f 50 12 00       	add	#18,	r15	;#0x0012
+    call #get_16
+    444c:	b0 12 b4 48       	call	#0x48b4	
+
+    ; print blank line
+
+    mov #0x0a, r15                  ; LF
+    4450:	3f 40 0a 00       	mov	#10,	r15	;#0x000a
+    call #print_char
+    4454:	b0 12 cc 48       	call	#0x48cc	
+
+    ; encryption time!
+
+    mov r1, r15                     ; &plaintext
+    4458:	0f 41             	mov	r1,	r15	
+    mov r1, r14
+    445a:	0e 41             	mov	r1,	r14	
+    add #18, r14                    ; &key
+    445c:	3e 50 12 00       	add	#18,	r14	;#0x0012
+    mov r1, r13
+    4460:	0d 41             	mov	r1,	r13	
+    add #36, r13                    ; &ciphertext
+    4462:	3d 50 24 00       	add	#36,	r13	;#0x0024
+    call #aes128_encrypt
+    4466:	b0 12 78 44       	call	#0x4478	
+
+    add #54, r1
+    446a:	31 50 36 00       	add	#54,	r1	;#0x0036
+
+0000446e <__stop_progExec__>:
+    446e:	32 d0 f0 00       	bis	#240,	r2	;#0x00f0
+    4472:	fd 3f             	jmp	$-4      	;abs 0x446e
+
+00004474 <__ctors_end>:
+    4474:	30 40 5e 49       	br	#0x495e	
+
+00004478 <aes128_encrypt>:
+; r15: &plaintext (16 bytes)
+; r14: &key (16 bytes)
+; r13: &ciphertext (16 bytes)
+
+aes128_encrypt:
+    push r4                         ; clobbered
+    4478:	04 12             	push	r4		
+    push r5                         ; clobbered
+    447a:	05 12             	push	r5		
+    push r6                         ; clobbered
+    447c:	06 12             	push	r6		
+
+    push r15                        ; 804(r1): &plaintext
+    447e:	0f 12             	push	r15		
+    push r14                        ; 802(r1): &key
+    4480:	0e 12             	push	r14		
+    push r13                        ; 800(r1): &ciphertext
+    4482:	0d 12             	push	r13		
+
+    sub #800, r1                    ; 0(r1): 50 16-byte chunks
+    4484:	31 80 20 03       	sub	#800,	r1	;#0x0320
+
+    ; round 0 ("input") -- just XOR the plaintext with the key
+
+    mov r1, r13
+    4488:	0d 41             	mov	r1,	r13	
+    call #xor_16
+    448a:	b0 12 90 48       	call	#0x4890	
+
+    ; rounds 1-10
+
+    mov #1, r5                      ; r5: round number
+    448e:	15 43             	mov	#1,	r5	;r3 As==01
+    mov r1, r4                      ; r4: &(current position in state)
+    4490:	04 41             	mov	r1,	r4	
+
+1$:
+    mov r4, r15
+    4492:	0f 44             	mov	r4,	r15	
+    mov r4, r14
+    4494:	0e 44             	mov	r4,	r14	
+    add #16, r14
+    4496:	3e 50 10 00       	add	#16,	r14	;#0x0010
+    call #aes_subbytes
+    449a:	b0 12 b0 47       	call	#0x47b0	
+
+    mov r4, r15
+    449e:	0f 44             	mov	r4,	r15	
+    add #16, r15
+    44a0:	3f 50 10 00       	add	#16,	r15	;#0x0010
+    mov r4, r14
+    44a4:	0e 44             	mov	r4,	r14	
+    add #32, r14
+    44a6:	3e 50 20 00       	add	#32,	r14	;#0x0020
+    call #aes_shiftrows
+    44aa:	b0 12 c6 47       	call	#0x47c6	
+
+    mov r4, r15
+    44ae:	0f 44             	mov	r4,	r15	
+    add #32, r15
+    44b0:	3f 50 20 00       	add	#32,	r15	;#0x0020
+    mov r4, r14
+    44b4:	0e 44             	mov	r4,	r14	
+    add #48, r14
+    44b6:	3e 50 30 00       	add	#48,	r14	;#0x0030
+
+    cmp #10, r5
+    44ba:	35 90 0a 00       	cmp	#10,	r5	;#0x000a
+    jeq 2$
+    44be:	03 24             	jz	$+8      	;abs 0x44c6
+
+    ; rounds 1-9
+    call #aes_mixcolumns
+    44c0:	b0 12 08 48       	call	#0x4808	
+    jmp 3$
+    44c4:	02 3c             	jmp	$+6      	;abs 0x44ca
+
+2$:
+    ; round 10
+    call #copy_16
+    44c6:	b0 12 a4 48       	call	#0x48a4	
+
+3$:
+    mov r4, r15
+    44ca:	0f 44             	mov	r4,	r15	
+    sub #16, r15
+    44cc:	3f 80 10 00       	sub	#16,	r15	;#0x0010
+    mov r4, r14
+    44d0:	0e 44             	mov	r4,	r14	
+    add #64, r14
+    44d2:	3e 50 40 00       	add	#64,	r14	;#0x0040
+    mov r5, r13
+    44d6:	0d 45             	mov	r5,	r13	
+
+    cmp #1, r5
+    44d8:	15 93             	cmp	#1,	r5	;r3 As==01
+    jne 5$
+    44da:	02 20             	jnz	$+6      	;abs 0x44e0
+
+    mov 802(r1), r15                ; for round 1, src is &key
+    44dc:	1f 41 22 03       	mov	802(r1),r15	;0x0322(r1)
+
+5$:
+    call #aes128_key_expansion
+    44e0:	b0 12 e8 46       	call	#0x46e8	
+
+    mov r4, r15
+    44e4:	0f 44             	mov	r4,	r15	
+    add #48, r15
+    44e6:	3f 50 30 00       	add	#48,	r15	;#0x0030
+    mov r4, r14
+    44ea:	0e 44             	mov	r4,	r14	
+    add #64, r14
+    44ec:	3e 50 40 00       	add	#64,	r14	;#0x0040
+    mov r4, r13
+    44f0:	0d 44             	mov	r4,	r13	
+    add #80, r13
+    44f2:	3d 50 50 00       	add	#80,	r13	;#0x0050
+
+    cmp #10, r5
+    44f6:	35 90 0a 00       	cmp	#10,	r5	;#0x000a
+    jne 4$
+    44fa:	02 20             	jnz	$+6      	;abs 0x4500
+
+    mov 800(r1), r13                ; for round 10, output goes to ciphertext
+    44fc:	1d 41 20 03       	mov	800(r1),r13	;0x0320(r1)
+
+4$:
+    call #xor_16
+    4500:	b0 12 90 48       	call	#0x4890	
+
+    add #80, r4
+    4504:	34 50 50 00       	add	#80,	r4	;#0x0050
+
+    inc r5
+    4508:	15 53             	inc	r5		
+    cmp #11, r5
+    450a:	35 90 0b 00       	cmp	#11,	r5	;#0x000b
+    jne 1$
+    450e:	c1 23             	jnz	$-124    	;abs 0x4492
+
+    ; ---------- printing the state below this line ----------
+
+    ; print plaintext
+
+    mov #c__plaintext, r15
+    4510:	3f 40 a2 4c       	mov	#19618,	r15	;#0x4ca2
+    call #print_string
+    4514:	b0 12 40 49       	call	#0x4940	
+
+    mov 804(r1), r15
+    4518:	1f 41 24 03       	mov	804(r1),r15	;0x0324(r1)
+    mov #16, r14
+    451c:	3e 40 10 00       	mov	#16,	r14	;#0x0010
+    call #print_hex_buffer
+    4520:	b0 12 fa 48       	call	#0x48fa	
+
+    mov #0x0a, r15                  ; LF
+    4524:	3f 40 0a 00       	mov	#10,	r15	;#0x000a
+    call #print_char
+    4528:	b0 12 cc 48       	call	#0x48cc	
+
+    ; print key
+
+    mov #c__key, r15
+    452c:	3f 40 af 4c       	mov	#19631,	r15	;#0x4caf
+    call #print_string
+    4530:	b0 12 40 49       	call	#0x4940	
+
+    mov 802(r1), r15
+    4534:	1f 41 22 03       	mov	802(r1),r15	;0x0322(r1)
+    mov #16, r14
+    4538:	3e 40 10 00       	mov	#16,	r14	;#0x0010
+    call #print_hex_buffer
+    453c:	b0 12 fa 48       	call	#0x48fa	
+
+    mov #0x0a, r15                  ; LF
+    4540:	3f 40 0a 00       	mov	#10,	r15	;#0x000a
+    call #print_char
+    4544:	b0 12 cc 48       	call	#0x48cc	
+
+    ; print ciphertext
+
+    mov #c__ciphertext, r15
+    4548:	3f 40 bc 4c       	mov	#19644,	r15	;#0x4cbc
+    call #print_string
+    454c:	b0 12 40 49       	call	#0x4940	
+
+    mov 800(r1), r15
+    4550:	1f 41 20 03       	mov	800(r1),r15	;0x0320(r1)
+    mov #16, r14
+    4554:	3e 40 10 00       	mov	#16,	r14	;#0x0010
+    call #print_hex_buffer
+    4558:	b0 12 fa 48       	call	#0x48fa	
+
+    mov #0x0a, r15                  ; LF
+    455c:	3f 40 0a 00       	mov	#10,	r15	;#0x000a
+    call #print_char
+    4560:	b0 12 cc 48       	call	#0x48cc	
+
+    ; print blank line
+
+    mov #0x0a, r15                  ; LF
+    4564:	3f 40 0a 00       	mov	#10,	r15	;#0x000a
+    call #print_char
+    4568:	b0 12 cc 48       	call	#0x48cc	
+
+    ; print dashed line
+
+    call #print_dashed_line
+    456c:	b0 12 54 49       	call	#0x4954	
+
+    ; print header lines
+
+    mov #c__header_1, r15
+    4570:	3f 40 0f 4d       	mov	#19727,	r15	;#0x4d0f
+    call #print_string
+    4574:	b0 12 40 49       	call	#0x4940	
+
+    mov #c__header_2, r15
+    4578:	3f 40 55 4d       	mov	#19797,	r15	;#0x4d55
+    call #print_string
+    457c:	b0 12 40 49       	call	#0x4940	
+
+    ; print dashed line
+
+    call #print_dashed_line
+    4580:	b0 12 54 49       	call	#0x4954	
+
+    ; print state from each round
+
+    mov #0, r5                      ; r5: round number (0 ["input"], 1-10, 11
+    4584:	05 43             	clr	r5		
+                                    ;     ["output"])
+
+100$:
+    mov #0, r6                      ; r6: line number within row (0-3)
+    4586:	06 43             	clr	r6		
+
+    cmp #1, r5                      ; if it's not round 1, skip setting r4
+    4588:	15 93             	cmp	#1,	r5	;r3 As==01
+    jne 101$                        ; (r4 is garbage at the end of round 0)
+    458a:	01 20             	jnz	$+4      	;abs 0x458e
+
+    mov r1, r4                      ; r4: &(current position in state)
+    458c:	04 41             	mov	r1,	r4	
+
+101$:
+    mov #0x7c, r15                  ; "|"
+    458e:	3f 40 7c 00       	mov	#124,	r15	;#0x007c
+    call #print_char
+    4592:	b0 12 cc 48       	call	#0x48cc	
+
+    ; round number (on line 1 only)
+    cmp #1, r6
+    4596:	16 93             	cmp	#1,	r6	;r3 As==01
+    jeq 102$
+    4598:	07 24             	jz	$+16     	;abs 0x45a8
+
+    mov #0x20, r15                  ; " " (space)
+    459a:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    mov #6, r14
+    459e:	3e 40 06 00       	mov	#6,	r14	;#0x0006
+    call #print_char_repeatedly
+    45a2:	b0 12 de 48       	call	#0x48de	
+
+    jmp 103$
+    45a6:	03 3c             	jmp	$+8      	;abs 0x45ae
+
+102$:
+    mov r5, r15
+    45a8:	0f 45             	mov	r5,	r15	
+    call #aes128_print_round_number
+    45aa:	b0 12 3e 47       	call	#0x473e	
+
+103$:
+    mov #0x7c, r15                  ; "|"
+    45ae:	3f 40 7c 00       	mov	#124,	r15	;#0x007c
+    call #print_char
+    45b2:	b0 12 cc 48       	call	#0x48cc	
+
+    ; start of round
+    tst r5
+    45b6:	05 93             	tst	r5		
+    jz 151$                          ; round 0
+    45b8:	05 24             	jz	$+12     	;abs 0x45c4
+
+    cmp #11, r5
+    45ba:	35 90 0b 00       	cmp	#11,	r5	;#0x000b
+    jeq 152$                         ; round 11
+    45be:	06 24             	jz	$+14     	;abs 0x45cc
+
+    mov r4, r15
+    45c0:	0f 44             	mov	r4,	r15	
+
+    jmp 153$
+    45c2:	07 3c             	jmp	$+16     	;abs 0x45d2
+
+151$:
+    mov 804(r1), r15                ; &plaintext
+    45c4:	1f 41 24 03       	mov	804(r1),r15	;0x0324(r1)
+    add r6, r15                     ; + line number
+    45c8:	0f 56             	add	r6,	r15	
+    jmp 153$
+    45ca:	03 3c             	jmp	$+8      	;abs 0x45d2
+
+152$:
+    mov 800(r1), r15                ; &ciphertext
+    45cc:	1f 41 20 03       	mov	800(r1),r15	;0x0320(r1)
+    add r6, r15                     ; + line number
+    45d0:	0f 56             	add	r6,	r15	
+
+153$:
+    call #print_every_fourth_byte
+    45d2:	b0 12 c0 46       	call	#0x46c0	
+
+    add #16, r4
+    45d6:	34 50 10 00       	add	#16,	r4	;#0x0010
+
+    mov #0x7c, r15                  ; "|"
+    45da:	3f 40 7c 00       	mov	#124,	r15	;#0x007c
+    call #print_char
+    45de:	b0 12 cc 48       	call	#0x48cc	
+
+    ; after subbytes
+    tst r5
+    45e2:	05 93             	tst	r5		
+    jz 169$                         ; round 0 doesn't do subbytes
+    45e4:	07 24             	jz	$+16     	;abs 0x45f4
+
+    cmp #11, r5
+    45e6:	35 90 0b 00       	cmp	#11,	r5	;#0x000b
+    jeq 169$                        ; round 11 doesn't, either
+    45ea:	04 24             	jz	$+10     	;abs 0x45f4
+
+    mov r4, r15
+    45ec:	0f 44             	mov	r4,	r15	
+    call #print_every_fourth_byte
+    45ee:	b0 12 c0 46       	call	#0x46c0	
+
+    jmp 170$
+    45f2:	06 3c             	jmp	$+14     	;abs 0x4600
+
+169$:
+    mov #0x20, r15                  ; " " (space)
+    45f4:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    mov #11, r14
+    45f8:	3e 40 0b 00       	mov	#11,	r14	;#0x000b
+    call #print_char_repeatedly
+    45fc:	b0 12 de 48       	call	#0x48de	
+
+170$:
+    add #16, r4
+    4600:	34 50 10 00       	add	#16,	r4	;#0x0010
+
+    mov #0x7c, r15                  ; "|"
+    4604:	3f 40 7c 00       	mov	#124,	r15	;#0x007c
+    call #print_char
+    4608:	b0 12 cc 48       	call	#0x48cc	
+
+    ; after shiftrows
+    tst r5
+    460c:	05 93             	tst	r5		
+    jz 179$                         ; round 0 doesn't do shiftrows
+    460e:	07 24             	jz	$+16     	;abs 0x461e
+
+    cmp #11, r5
+    4610:	35 90 0b 00       	cmp	#11,	r5	;#0x000b
+    jeq 179$                        ; round 11 doesn't, either
+    4614:	04 24             	jz	$+10     	;abs 0x461e
+
+    mov r4, r15
+    4616:	0f 44             	mov	r4,	r15	
+    call #print_every_fourth_byte
+    4618:	b0 12 c0 46       	call	#0x46c0	
+
+    jmp 180$
+    461c:	06 3c             	jmp	$+14     	;abs 0x462a
+
+179$:
+    mov #0x20, r15                  ; " " (space)
+    461e:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    mov #11, r14
+    4622:	3e 40 0b 00       	mov	#11,	r14	;#0x000b
+    call #print_char_repeatedly
+    4626:	b0 12 de 48       	call	#0x48de	
+
+180$:
+    add #16, r4
+    462a:	34 50 10 00       	add	#16,	r4	;#0x0010
+
+    mov #0x7c, r15                  ; "|"
+    462e:	3f 40 7c 00       	mov	#124,	r15	;#0x007c
+    call #print_char
+    4632:	b0 12 cc 48       	call	#0x48cc	
+
+    ; after mixcolumns
+    tst r5
+    4636:	05 93             	tst	r5		
+    jz 189$                         ; round 0 doesn't do mixcolumns
+    4638:	07 24             	jz	$+16     	;abs 0x4648
+
+    cmp #10, r5
+    463a:	35 90 0a 00       	cmp	#10,	r5	;#0x000a
+    jge 189$                        ; rounds 10 and 11 don't, either
+    463e:	04 34             	jge	$+10     	;abs 0x4648
+
+    mov r4, r15
+    4640:	0f 44             	mov	r4,	r15	
+    call #print_every_fourth_byte
+    4642:	b0 12 c0 46       	call	#0x46c0	
+
+    jmp 190$
+    4646:	06 3c             	jmp	$+14     	;abs 0x4654
+
+189$:
+    mov #0x20, r15                  ; " " (space)
+    4648:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    mov #11, r14
+    464c:	3e 40 0b 00       	mov	#11,	r14	;#0x000b
+    call #print_char_repeatedly
+    4650:	b0 12 de 48       	call	#0x48de	
+
+190$:
+    add #16, r4
+    4654:	34 50 10 00       	add	#16,	r4	;#0x0010
+
+    mov #0x7c, r15                  ; "|"
+    4658:	3f 40 7c 00       	mov	#124,	r15	;#0x007c
+    call #print_char
+    465c:	b0 12 cc 48       	call	#0x48cc	
+
+    ; round key value
+    cmp #11, r5
+    4660:	35 90 0b 00       	cmp	#11,	r5	;#0x000b
+    jeq 199$                        ; round 11 doesn't have a round key value
+    4664:	09 24             	jz	$+20     	;abs 0x4678
+
+    mov r4, r15
+    4666:	0f 44             	mov	r4,	r15	
+
+    tst r5
+    4668:	05 93             	tst	r5		
+    jne 191$
+    466a:	03 20             	jnz	$+8      	;abs 0x4672
+
+    mov 802(r1), r15
+    466c:	1f 41 22 03       	mov	802(r1),r15	;0x0322(r1)
+    add r6, r15
+    4670:	0f 56             	add	r6,	r15	
+
+191$:
+    call #print_every_fourth_byte
+    4672:	b0 12 c0 46       	call	#0x46c0	
+    jmp 200$
+    4676:	06 3c             	jmp	$+14     	;abs 0x4684
+
+199$:
+    mov #0x20, r15                  ; " " (space)
+    4678:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    mov #11, r14
+    467c:	3e 40 0b 00       	mov	#11,	r14	;#0x000b
+    call #print_char_repeatedly
+    4680:	b0 12 de 48       	call	#0x48de	
+
+200$:
+    mov #0x7c, r15                  ; "|"
+    4684:	3f 40 7c 00       	mov	#124,	r15	;#0x007c
+    call #print_char
+    4688:	b0 12 cc 48       	call	#0x48cc	
+
+    mov #0x0a, r15                  ; LF
+    468c:	3f 40 0a 00       	mov	#10,	r15	;#0x000a
+    call #print_char
+    4690:	b0 12 cc 48       	call	#0x48cc	
+
+    sub #63, r4                     ; move the state pointer to the next byte
+    4694:	34 80 3f 00       	sub	#63,	r4	;#0x003f
+                                    ; at the start of this round
+
+    inc r6
+    4698:	16 53             	inc	r6		
+    cmp #4, r6
+    469a:	26 92             	cmp	#4,	r6	;r2 As==10
+    jl 101$
+    469c:	78 3b             	jl	$-270    	;abs 0x458e
+
+    call #print_dashed_line
+    469e:	b0 12 54 49       	call	#0x4954	
+
+    add #76, r4                     ; increment r4 by one row (5*16 bytes)
+    46a2:	34 50 4c 00       	add	#76,	r4	;#0x004c
+                                    ; minus the four byte offset
+
+    inc r5
+    46a6:	15 53             	inc	r5		
+
+    cmp #12, r5
+    46a8:	35 90 0c 00       	cmp	#12,	r5	;#0x000c
+    jl 100$
+    46ac:	6c 3b             	jl	$-294    	;abs 0x4586
+
+    ; end
+
+    add #800, r1
+    46ae:	31 50 20 03       	add	#800,	r1	;#0x0320
+
+    pop r13
+    46b2:	3d 41             	pop	r13		
+    pop r14
+    46b4:	3e 41             	pop	r14		
+    pop r15
+    46b6:	3f 41             	pop	r15		
+
+    pop r6
+    46b8:	36 41             	pop	r6		
+    pop r5
+    46ba:	35 41             	pop	r5		
+    pop r4
+    46bc:	34 41             	pop	r4		
+
+    ret
+    46be:	30 41             	ret			
+
+000046c0 <print_every_fourth_byte>:
+
+; ===== print_every_fourth_byte =====
+; r15: &src
+
+print_every_fourth_byte:
+    push r4                         ; clobbered
+    46c0:	04 12             	push	r4		
+    push r5                         ; clobbered
+    46c2:	05 12             	push	r5		
+
+    mov r15, r4                     ; r4: &(current position)
+    46c4:	04 4f             	mov	r15,	r4	
+
+    mov r15, r5
+    46c6:	05 4f             	mov	r15,	r5	
+    add #16, r5                     ; r5: &end
+    46c8:	35 50 10 00       	add	#16,	r5	;#0x0010
+    jmp 2$
+    46cc:	04 3c             	jmp	$+10     	;abs 0x46d6
+
+1$:
+    mov #0x20, r15                  ; " " (space)
+    46ce:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    call #print_char
+    46d2:	b0 12 cc 48       	call	#0x48cc	
+
+2$:
+    mov.b @r4, r15
+    46d6:	6f 44             	mov.b	@r4,	r15	
+    call #print_hex_byte
+    46d8:	b0 12 16 49       	call	#0x4916	
+
+    add #4, r4
+    46dc:	24 52             	add	#4,	r4	;r2 As==10
+    cmp r4, r5
+    46de:	05 94             	cmp	r4,	r5	
+    jne 1$
+    46e0:	f6 23             	jnz	$-18     	;abs 0x46ce
+
+    pop r5
+    46e2:	35 41             	pop	r5		
+    pop r4
+    46e4:	34 41             	pop	r4		
+
+    ret
+    46e6:	30 41             	ret			
+
+000046e8 <aes128_key_expansion>:
+; r15: &src
+; r14: &dest
+; r13: round number (1-10)
+
+aes128_key_expansion:
+    push r5                         ; clobbered
+    46e8:	05 12             	push	r5		
+    push r4                         ; clobbered
+    46ea:	04 12             	push	r4		
+
+    dec r13
+    46ec:	1d 83             	dec	r13		
+    add #c__aes128_rcon, r13
+    46ee:	3d 50 70 4c       	add	#19568,	r13	;#0x4c70
+    mov.b @r13, r4                  ; r4: rcon(round number)
+    46f2:	64 4d             	mov.b	@r13,	r4	
+
+    mov #0, r12                     ; r12: current byte number (0-15)
+    46f4:	0c 43             	clr	r12		
+    mov r14, r11                    ; r11: &(current dest)
+    46f6:	0b 4e             	mov	r14,	r11	
+
+1$:
+    cmp #4, r12
+    46f8:	2c 92             	cmp	#4,	r12	;r2 As==10
+    jl 2$
+    46fa:	04 38             	jl	$+10     	;abs 0x4704
+
+    ; last 12 bytes
+
+    mov r11, r5
+    46fc:	05 4b             	mov	r11,	r5	
+    sub #4, r5
+    46fe:	25 82             	sub	#4,	r5	;r2 As==10
+    mov.b @r5, r5                   ; r5: temp (appropriate byte of w[i-1])
+    4700:	65 45             	mov.b	@r5,	r5	
+
+    jmp 3$
+    4702:	0f 3c             	jmp	$+32     	;abs 0x4722
+
+2$:
+    ; first 4 bytes
+
+    mov r12, r5
+    4704:	05 4c             	mov	r12,	r5	
+    inc r5                          ; r5: (byte number) + 1
+    4706:	15 53             	inc	r5		
+
+    cmp #4, r5
+    4708:	25 92             	cmp	#4,	r5	;r2 As==10
+    jne 4$
+    470a:	01 20             	jnz	$+4      	;abs 0x470e
+
+    mov #0, r5                      ; r5: ((byte number) + 1) mod 4
+    470c:	05 43             	clr	r5		
+
+4$:
+    add r15, r5
+    470e:	05 5f             	add	r15,	r5	
+    add #12, r5
+    4710:	35 50 0c 00       	add	#12,	r5	;#0x000c
+    mov.b @r5, r5                   ; r5: rot(temp)
+    4714:	65 45             	mov.b	@r5,	r5	
+
+    add #c__aes_sbox, r5
+    4716:	35 50 70 4b       	add	#19312,	r5	;#0x4b70
+    mov.b @r5, r5                   ; r5: sbox(rot(temp))
+    471a:	65 45             	mov.b	@r5,	r5	
+
+    tst r12                         ; the lower three bytes of the round
+    471c:	0c 93             	tst	r12		
+    jnz 3$                          ; constants are zeroes, so only XOR the
+    471e:	01 20             	jnz	$+4      	;abs 0x4722
+                                    ; first byte
+
+    xor.b r4, r5                    ; r5: sbox(rot(temp)) XOR rcon(round number)
+    4720:	45 e4             	xor.b	r4,	r5	
+
+3$:
+    mov r15, r13
+    4722:	0d 4f             	mov	r15,	r13	
+    add r12, r13
+    4724:	0d 5c             	add	r12,	r13	
+    mov.b @r13, @r11                ; r13: appropriate byte of &w[i-Nk]
+    4726:	eb 4d 00 00       	mov.b	@r13,	0(r11)	;0x0000(r11)
+
+    xor.b r5, @r11
+    472a:	cb e5 00 00       	xor.b	r5,	0(r11)	;0x0000(r11)
+
+    inc r11
+    472e:	1b 53             	inc	r11		
+    inc r12
+    4730:	1c 53             	inc	r12		
+
+    cmp #16, r12
+    4732:	3c 90 10 00       	cmp	#16,	r12	;#0x0010
+    jne 1$
+    4736:	e0 23             	jnz	$-62     	;abs 0x46f8
+
+    pop r4
+    4738:	34 41             	pop	r4		
+    pop r5
+    473a:	35 41             	pop	r5		
+
+    ret
+    473c:	30 41             	ret			
+
+0000473e <aes128_print_round_number>:
+
+; ===== aes128_print_round_number =====
+; r15: round number (0-11)
+
+aes128_print_round_number:
+    tst r15
+    473e:	0f 93             	tst	r15		
+    jz 100$                         ; (round number) == 0 ("input")
+    4740:	26 24             	jz	$+78     	;abs 0x478e
+    jl 9999$                        ; ERROR: (round number) < 0
+    4742:	2f 38             	jl	$+96     	;abs 0x47a2
+
+    cmp #11, r15
+    4744:	3f 90 0b 00       	cmp	#11,	r15	;#0x000b
+    jeq 200$                        ; (round number) == 11 ("output")
+    4748:	27 24             	jz	$+80     	;abs 0x4798
+    jge 9999$                       ; ERROR: (round number) >= 11
+    474a:	2b 34             	jge	$+88     	;abs 0x47a2
+
+    ; numeric round number
+
+    push r4                         ; clobbered
+    474c:	04 12             	push	r4		
+
+    mov r15, r4                     ; r4: round number
+    474e:	04 4f             	mov	r15,	r4	
+
+    mov #0x20, r15                  ; " " (space)
+    4750:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    mov #2, r14
+    4754:	2e 43             	mov	#2,	r14	;r3 As==10
+    call #print_char_repeatedly
+    4756:	b0 12 de 48       	call	#0x48de	
+
+    cmp #10, r4
+    475a:	34 90 0a 00       	cmp	#10,	r4	;#0x000a
+    jge 2$                          ; (round number) >= 10?
+    475e:	10 34             	jge	$+34     	;abs 0x4780
+
+    mov #0x20, r15                  ; " " (space)
+    4760:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    call #print_char
+    4764:	b0 12 cc 48       	call	#0x48cc	
+
+1$:
+    ; one's digit
+
+    add #c__hex_digits, r4
+    4768:	34 50 60 49       	add	#18784,	r4	;#0x4960
+    mov.b @r4, r15
+    476c:	6f 44             	mov.b	@r4,	r15	
+    call #print_char
+    476e:	b0 12 cc 48       	call	#0x48cc	
+
+    mov #0x20, r15                  ; " " (space)
+    4772:	3f 40 20 00       	mov	#32,	r15	;#0x0020
+    mov #2, r14
+    4776:	2e 43             	mov	#2,	r14	;r3 As==10
+    call #print_char_repeatedly
+    4778:	b0 12 de 48       	call	#0x48de	
+
+    pop r4
+    477c:	34 41             	pop	r4		
+
+    ret
+    477e:	30 41             	ret			
+
+2$:
+    ; ten's digit
+
+    mov #0x31, r15                  ; "1"
+    4780:	3f 40 31 00       	mov	#49,	r15	;#0x0031
+    call #print_char
+    4784:	b0 12 cc 48       	call	#0x48cc	
+
+    sub #10, r4
+    4788:	34 80 0a 00       	sub	#10,	r4	;#0x000a
+
+    jmp 1$
+    478c:	ed 3f             	jmp	$-36     	;abs 0x4768
+
+100$:
+    ; "input" round
+
+    mov #c__input_round_number, r15
+    478e:	3f 40 9b 4d       	mov	#19867,	r15	;#0x4d9b
+    call #print_string
+    4792:	b0 12 40 49       	call	#0x4940	
+
+    ret
+    4796:	30 41             	ret			
+
+200$:
+    ; "output" round
+
+    mov #c__output_round_number, r15
+    4798:	3f 40 a2 4d       	mov	#19874,	r15	;#0x4da2
+    call #print_string
+    479c:	b0 12 40 49       	call	#0x4940	
+
+    ret
+    47a0:	30 41             	ret			
+
+9999$:
+    ; error of some sort -- print six question marks and bail
+
+    mov #0x3f, r15                  ; "?"
+    47a2:	3f 40 3f 00       	mov	#63,	r15	;#0x003f
+    mov #6, r14
+    47a6:	3e 40 06 00       	mov	#6,	r14	;#0x0006
+    call #print_char_repeatedly
+    47aa:	b0 12 de 48       	call	#0x48de	
+
+    ret
+    47ae:	30 41             	ret			
+
+000047b0 <aes_subbytes>:
+; ===== aes_subbytes =====
+; r15: &src
+; r14: &dest
+
+aes_subbytes:
+    mov #16, r13                    ; r13: bytes left
+    47b0:	3d 40 10 00       	mov	#16,	r13	;#0x0010
+
+1$:
+    mov.b @r15+, r12
+    47b4:	7c 4f             	mov.b	@r15+,	r12	
+    add #c__aes_sbox, r12
+    47b6:	3c 50 70 4b       	add	#19312,	r12	;#0x4b70
+    mov.b @r12, @r14
+    47ba:	ee 4c 00 00       	mov.b	@r12,	0(r14)	;0x0000(r14)
+    inc r14
+    47be:	1e 53             	inc	r14		
+
+    dec r13
+    47c0:	1d 83             	dec	r13		
+    jnz 1$
+    47c2:	f8 23             	jnz	$-14     	;abs 0x47b4
+
+    ret
+    47c4:	30 41             	ret			
+
+000047c6 <aes_shiftrows>:
+; | 2  6 10 14|    |10 14  2  6|
+; | 3  7 11 15|    |15  3  7 11|
+; +-----------+    +-----------+
+
+aes_shiftrows:
+    mov.b @r15+,  0(r14)
+    47c6:	fe 4f 00 00       	mov.b	@r15+,	0(r14)	;0x0000(r14)
+    mov.b @r15+, 13(r14)
+    47ca:	fe 4f 0d 00       	mov.b	@r15+,	13(r14)	;0x000d(r14)
+    mov.b @r15+, 10(r14)
+    47ce:	fe 4f 0a 00       	mov.b	@r15+,	10(r14)	;0x000a(r14)
+    mov.b @r15+,  7(r14)
+    47d2:	fe 4f 07 00       	mov.b	@r15+,	7(r14)	;0x0007(r14)
+
+    mov.b @r15+,  4(r14)
+    47d6:	fe 4f 04 00       	mov.b	@r15+,	4(r14)	;0x0004(r14)
+    mov.b @r15+,  1(r14)
+    47da:	fe 4f 01 00       	mov.b	@r15+,	1(r14)	;0x0001(r14)
+    mov.b @r15+, 14(r14)
+    47de:	fe 4f 0e 00       	mov.b	@r15+,	14(r14)	;0x000e(r14)
+    mov.b @r15+, 11(r14)
+    47e2:	fe 4f 0b 00       	mov.b	@r15+,	11(r14)	;0x000b(r14)
+
+    mov.b @r15+,  8(r14)
+    47e6:	fe 4f 08 00       	mov.b	@r15+,	8(r14)	;0x0008(r14)
+    mov.b @r15+,  5(r14)
+    47ea:	fe 4f 05 00       	mov.b	@r15+,	5(r14)	;0x0005(r14)
+    mov.b @r15+,  2(r14)
+    47ee:	fe 4f 02 00       	mov.b	@r15+,	2(r14)	;0x0002(r14)
+    mov.b @r15+, 15(r14)
+    47f2:	fe 4f 0f 00       	mov.b	@r15+,	15(r14)	;0x000f(r14)
+
+    mov.b @r15+, 12(r14)
+    47f6:	fe 4f 0c 00       	mov.b	@r15+,	12(r14)	;0x000c(r14)
+    mov.b @r15+,  9(r14)
+    47fa:	fe 4f 09 00       	mov.b	@r15+,	9(r14)	;0x0009(r14)
+    mov.b @r15+,  6(r14)
+    47fe:	fe 4f 06 00       	mov.b	@r15+,	6(r14)	;0x0006(r14)
+    mov.b @r15+,  3(r14)
+    4802:	fe 4f 03 00       	mov.b	@r15+,	3(r14)	;0x0003(r14)
+
+    ret
+    4806:	30 41             	ret			
+
+00004808 <aes_mixcolumns>:
+; ===== aes_mixcolumns =====
+; r15: &src
+; r14: &dest
+
+aes_mixcolumns:
+    mov r15, r11
+    4808:	0b 4f             	mov	r15,	r11	
+    add #16, r11                    ; r11: &end
+    480a:	3b 50 10 00       	add	#16,	r11	;#0x0010
+
+1$:
+    ; first byte of column
+
+    mov.b 0(r15), r12
+    480e:	6c 4f             	mov.b	@r15,	r12	
+    add #c__GF_multiply_2, r12
+    4810:	3c 50 70 49       	add	#18800,	r12	;#0x4970
+    mov.b @r12, r13
+    4814:	6d 4c             	mov.b	@r12,	r13	
+
+    mov.b 1(r15), r12
+    4816:	5c 4f 01 00       	mov.b	1(r15),	r12	;0x0001(r15)
+    add #c__GF_multiply_3, r12
+    481a:	3c 50 70 4a       	add	#19056,	r12	;#0x4a70
+    xor.b @r12, r13
+    481e:	6d ec             	xor.b	@r12,	r13	
+
+    xor.b 2(r15), r13
+    4820:	5d ef 02 00       	xor.b	2(r15),	r13	;0x0002(r15)
+
+    xor.b 3(r15), r13
+    4824:	5d ef 03 00       	xor.b	3(r15),	r13	;0x0003(r15)
+
+    mov.b r13, 0(r14)
+    4828:	ce 4d 00 00       	mov.b	r13,	0(r14)	;0x0000(r14)
+
+    ; second byte of column
+
+    mov.b 0(r15), r13
+    482c:	6d 4f             	mov.b	@r15,	r13	
+
+    mov.b 1(r15), r12
+    482e:	5c 4f 01 00       	mov.b	1(r15),	r12	;0x0001(r15)
+    add #c__GF_multiply_2, r12
+    4832:	3c 50 70 49       	add	#18800,	r12	;#0x4970
+    xor.b @r12, r13
+    4836:	6d ec             	xor.b	@r12,	r13	
+
+    mov.b 2(r15), r12
+    4838:	5c 4f 02 00       	mov.b	2(r15),	r12	;0x0002(r15)
+    add #c__GF_multiply_3, r12
+    483c:	3c 50 70 4a       	add	#19056,	r12	;#0x4a70
+    xor.b @r12, r13
+    4840:	6d ec             	xor.b	@r12,	r13	
+
+    xor.b 3(r15), r13
+    4842:	5d ef 03 00       	xor.b	3(r15),	r13	;0x0003(r15)
+
+    mov.b r13, 1(r14)
+    4846:	ce 4d 01 00       	mov.b	r13,	1(r14)	;0x0001(r14)
+
+    ; third byte of column
+
+    mov.b 0(r15), r13
+    484a:	6d 4f             	mov.b	@r15,	r13	
+
+    xor.b 1(r15), r13
+    484c:	5d ef 01 00       	xor.b	1(r15),	r13	;0x0001(r15)
+
+    mov.b 2(r15), r12
+    4850:	5c 4f 02 00       	mov.b	2(r15),	r12	;0x0002(r15)
+    add #c__GF_multiply_2, r12
+    4854:	3c 50 70 49       	add	#18800,	r12	;#0x4970
+    xor.b @r12, r13
+    4858:	6d ec             	xor.b	@r12,	r13	
+
+    mov.b 3(r15), r12
+    485a:	5c 4f 03 00       	mov.b	3(r15),	r12	;0x0003(r15)
+    add #c__GF_multiply_3, r12
+    485e:	3c 50 70 4a       	add	#19056,	r12	;#0x4a70
+    xor.b @r12, r13
+    4862:	6d ec             	xor.b	@r12,	r13	
+
+    mov.b r13, 2(r14)
+    4864:	ce 4d 02 00       	mov.b	r13,	2(r14)	;0x0002(r14)
+
+    ; fourth byte of column
+
+    mov.b 0(r15), r12
+    4868:	6c 4f             	mov.b	@r15,	r12	
+    add #c__GF_multiply_3, r12
+    486a:	3c 50 70 4a       	add	#19056,	r12	;#0x4a70
+    mov.b @r12, r13
+    486e:	6d 4c             	mov.b	@r12,	r13	
+
+    xor.b 1(r15), r13
+    4870:	5d ef 01 00       	xor.b	1(r15),	r13	;0x0001(r15)
+
+    xor.b 2(r15), r13
+    4874:	5d ef 02 00       	xor.b	2(r15),	r13	;0x0002(r15)
+
+    mov.b 3(r15), r12
+    4878:	5c 4f 03 00       	mov.b	3(r15),	r12	;0x0003(r15)
+    add #c__GF_multiply_2, r12
+    487c:	3c 50 70 49       	add	#18800,	r12	;#0x4970
+    xor.b @r12, r13
+    4880:	6d ec             	xor.b	@r12,	r13	
+
+    mov.b r13, 3(r14)
+    4882:	ce 4d 03 00       	mov.b	r13,	3(r14)	;0x0003(r14)
+
+    add #4, r14
+    4886:	2e 52             	add	#4,	r14	;r2 As==10
+    add #4, r15
+    4888:	2f 52             	add	#4,	r15	;r2 As==10
+
+    cmp r15, r11
+    488a:	0b 9f             	cmp	r15,	r11	
+    jne 1$
+    488c:	c0 23             	jnz	$-126    	;abs 0x480e
+
+    ret
+    488e:	30 41             	ret			
+
+00004890 <xor_16>:
+; r15: &src1
+; r14: &src2
+; r13: &dest
+
+xor_16:
+    mov #16, r12                    ; r12: bytes remaining to XOR
+    4890:	3c 40 10 00       	mov	#16,	r12	;#0x0010
+
+1$:
+    mov @r15+, @r13
+    4894:	bd 4f 00 00       	mov	@r15+,	0(r13)	;0x0000(r13)
+    xor @r14+, @r13
+    4898:	bd ee 00 00       	xor	@r14+,	0(r13)	;0x0000(r13)
+    incd r13
+    489c:	2d 53             	incd	r13		
+
+    decd r12
+    489e:	2c 83             	decd	r12		
+    jnz 1$
+    48a0:	f9 23             	jnz	$-12     	;abs 0x4894
+
+    ret
+    48a2:	30 41             	ret			
+
+000048a4 <copy_16>:
+; ===== copy_16 =====
+; r15: &src
+; r14: &dest
+
+copy_16:
+    mov #16, r13                    ; r13: bytes remaining to copy
+    48a4:	3d 40 10 00       	mov	#16,	r13	;#0x0010
+
+1$:
+    mov @r15+, @r14
+    48a8:	be 4f 00 00       	mov	@r15+,	0(r14)	;0x0000(r14)
+    incd r14
+    48ac:	2e 53             	incd	r14		
+
+    decd r13
+    48ae:	2d 83             	decd	r13		
+    jnz 1$
+    48b0:	fb 23             	jnz	$-8      	;abs 0x48a8
+
+    ret
+    48b2:	30 41             	ret			
+
+000048b4 <get_16>:
+
+; ===== get_16 =====
+; r15: &dest
+
+get_16:
+    push #16
+    48b4:	30 12 10 00       	push	#16		;#0x0010
+    push r15
+    48b8:	0f 12             	push	r15		
+    sub #6, r1
+    48ba:	31 80 06 00       	sub	#6,	r1	;#0x0006
+
+    mov #0x8200, r2                 ; INT 0x02 = gets
+    48be:	32 40 00 82       	mov	#-32256,r2	;#0x8200
+    call #0x10
+    48c2:	b0 12 10 00       	call	#0x0010	
+
+    add #10, r1
+    48c6:	31 50 0a 00       	add	#10,	r1	;#0x000a
+
+    ret
+    48ca:	30 41             	ret			
+
+000048cc <print_char>:
+
+; ===== print_char =====
+; r15: char to print
+
+print_char:
+    push r15
+    48cc:	0f 12             	push	r15		
+    sub #6, r1
+    48ce:	31 80 06 00       	sub	#6,	r1	;#0x0006
+
+    mov #0x8000, r2                 ; INT 0x00 = putchar
+    48d2:	32 40 00 80       	mov	#-32768,r2	;#0x8000
+    call #0x10
+    48d6:	b0 12 10 00       	call	#0x0010	
+
+    add #8, r1
+    48da:	31 52             	add	#8,	r1	;r2 As==11
+
+    ret
+    48dc:	30 41             	ret			
+
+000048de <print_char_repeatedly>:
+; ===== print_char_repeatedly =====
+; r15: char to print
+; r14: count
+
+print_char_repeatedly:
+    push r4                         ; clobbered
+    48de:	04 12             	push	r4		
+    push r5                         ; clobbered
+    48e0:	05 12             	push	r5		
+
+    mov r15, r4                     ; r4: char to print
+    48e2:	04 4f             	mov	r15,	r4	
+    mov r14, r5                     ; r5: bytes remaining
+    48e4:	05 4e             	mov	r14,	r5	
+
+1$:
+    tst r5
+    48e6:	05 93             	tst	r5		
+    jz 2$
+    48e8:	05 24             	jz	$+12     	;abs 0x48f4
+
+    mov r4, r15
+    48ea:	0f 44             	mov	r4,	r15	
+    call #print_char
+    48ec:	b0 12 cc 48       	call	#0x48cc	
+
+    dec r5
+    48f0:	15 83             	dec	r5		
+    jmp 1$
+    48f2:	f9 3f             	jmp	$-12     	;abs 0x48e6
+
+2$:
+    pop r5
+    48f4:	35 41             	pop	r5		
+    pop r4
+    48f6:	34 41             	pop	r4		
+
+    ret
+    48f8:	30 41             	ret			
+
+000048fa <print_hex_buffer>:
+; ===== print_hex_buffer =====
+; r15: &buffer
+; r14: length
+
+print_hex_buffer:
+    push r4                         ; clobbered
+    48fa:	04 12             	push	r4		
+    push r5                         ; clobbered
+    48fc:	05 12             	push	r5		
+
+    mov r15, r4                     ; r4: &(current position)
+    48fe:	04 4f             	mov	r15,	r4	
+    mov r14, r5                     ; r5: bytes remaining
+    4900:	05 4e             	mov	r14,	r5	
+
+1$:
+    tst r5
+    4902:	05 93             	tst	r5		
+    jz 2$
+    4904:	05 24             	jz	$+12     	;abs 0x4910
+
+    mov.b @r4+, r15                 ; r15: byte to print
+    4906:	7f 44             	mov.b	@r4+,	r15	
+    call #print_hex_byte
+    4908:	b0 12 16 49       	call	#0x4916	
+
+    dec r5
+    490c:	15 83             	dec	r5		
+    jmp 1$
+    490e:	f9 3f             	jmp	$-12     	;abs 0x4902
+
+2$:
+    pop r5
+    4910:	35 41             	pop	r5		
+    pop r4
+    4912:	34 41             	pop	r4		
+
+    ret
+    4914:	30 41             	ret			
+
+00004916 <print_hex_byte>:
+; r15: byte to print
+
+print_hex_byte:
+    ; high nibble
+
+    push r15
+    4916:	0f 12             	push	r15		
+
+    and #0xf0, r15
+    4918:	3f f0 f0 00       	and	#240,	r15	;#0x00f0
+    rra r15
+    491c:	0f 11             	rra	r15		
+    rra r15
+    491e:	0f 11             	rra	r15		
+    rra r15
+    4920:	0f 11             	rra	r15		
+    rra r15
+    4922:	0f 11             	rra	r15		
+
+    add #c__hex_digits, r15
+    4924:	3f 50 60 49       	add	#18784,	r15	;#0x4960
+    mov.b @r15, r15
+    4928:	6f 4f             	mov.b	@r15,	r15	
+    call #print_char
+    492a:	b0 12 cc 48       	call	#0x48cc	
+
+    ; low nibble
+
+    pop r15
+    492e:	3f 41             	pop	r15		
+
+    and #0x0f, r15
+    4930:	3f f0 0f 00       	and	#15,	r15	;#0x000f
+    
+    add #c__hex_digits, r15
+    4934:	3f 50 60 49       	add	#18784,	r15	;#0x4960
+    mov.b @r15, r15
+    4938:	6f 4f             	mov.b	@r15,	r15	
+    call #print_char
+    493a:	b0 12 cc 48       	call	#0x48cc	
+
+    ret
+    493e:	30 41             	ret			
+
+00004940 <print_string>:
+
+; ===== print_string =====
+; r15: address of zero-terminated string
+
+print_string:
+    push r4                        ; clobbered
+    4940:	04 12             	push	r4		
+
+    mov r15, r4                    ; r4: current position
+    4942:	04 4f             	mov	r15,	r4	
+
+1$:
+    mov.b @r4+, r15                ; r15: char to print
+    4944:	7f 44             	mov.b	@r4+,	r15	
+
+    tst r15
+    4946:	0f 93             	tst	r15		
+    jz 2$
+    4948:	03 24             	jz	$+8      	;abs 0x4950
+
+    call #print_char
+    494a:	b0 12 cc 48       	call	#0x48cc	
+
+    jmp 1$
+    494e:	fa 3f             	jmp	$-10     	;abs 0x4944
+
+2$:
+    pop r4
+    4950:	34 41             	pop	r4		
+
+    ret
+    4952:	30 41             	ret			
+
+00004954 <print_dashed_line>:
+
+; ===== print_dashed_line =====
+
+print_dashed_line:
+    mov #c__dashed_line, r15
+    4954:	3f 40 c9 4c       	mov	#19657,	r15	;#0x4cc9
+    call #print_string
+    4958:	b0 12 40 49       	call	#0x4940	
+
+    ret
+    495c:	30 41             	ret			
+
+0000495e <_unexpected_>:
+    495e:	00 13             	reti			
+
+aes128-encrypt:     file format elf32-msp430
+
+SYMBOL TABLE:
+00004960 l    d  .rodata	00000000 .rodata
+00004c7a l       .rodata	00000000 c__plaintext_prompt
+00004c91 l       .rodata	00000000 c__key_prompt
+00004ca2 l       .rodata	00000000 c__plaintext
+00004caf l       .rodata	00000000 c__key
+00004cbc l       .rodata	00000000 c__ciphertext
+00004d0f l       .rodata	00000000 c__header_1
+00004d55 l       .rodata	00000000 c__header_2
+00004c70 l       .rodata	00000000 c__aes128_rcon
+00004b70 l       .rodata	00000000 c__aes_sbox
+00004960 l       .rodata	00000000 c__hex_digits
+00004d9b l       .rodata	00000000 c__input_round_number
+00004da2 l       .rodata	00000000 c__output_round_number
+00004970 l       .rodata	00000000 c__GF_multiply_2
+00004a70 l       .rodata	00000000 c__GF_multiply_3
+00004cc9 l       .rodata	00000000 c__dashed_line
+00002400 g       .rodata	00000000 __bss_start
+00002400 g       .rodata	00000000 _edata
+00002400 g       .rodata	00000000 __data_start
+
+
+Contents of section .rodata:
+ 4960 30313233 34353637 38396162 63646566  0123456789abcdef
+ 4970 00020406 080a0c0e 10121416 181a1c1e  ................
+ 4980 20222426 282a2c2e 30323436 383a3c3e   "$&(*,.02468:<>
+ 4990 40424446 484a4c4e 50525456 585a5c5e  @BDFHJLNPRTVXZ\^
+ 49a0 60626466 686a6c6e 70727476 787a7c7e  `bdfhjlnprtvxz|~
+ 49b0 80828486 888a8c8e 90929496 989a9c9e  ................
+ 49c0 a0a2a4a6 a8aaacae b0b2b4b6 b8babcbe  ................
+ 49d0 c0c2c4c6 c8caccce d0d2d4d6 d8dadcde  ................
+ 49e0 e0e2e4e6 e8eaecee f0f2f4f6 f8fafcfe  ................
+ 49f0 1b191f1d 13111715 0b090f0d 03010705  ................
+ 4a00 3b393f3d 33313735 2b292f2d 23212725  ;9?=3175+)/-#!'%
+ 4a10 5b595f5d 53515755 4b494f4d 43414745  [Y_]SQWUKIOMCAGE
+ 4a20 7b797f7d 73717775 6b696f6d 63616765  {y.}sqwukiomcage
+ 4a30 9b999f9d 93919795 8b898f8d 83818785  ................
+ 4a40 bbb9bfbd b3b1b7b5 aba9afad a3a1a7a5  ................
+ 4a50 dbd9dfdd d3d1d7d5 cbc9cfcd c3c1c7c5  ................
+ 4a60 fbf9fffd f3f1f7f5 ebe9efed e3e1e7e5  ................
+ 4a70 00030605 0c0f0a09 181b1e1d 14171211  ................
+ 4a80 30333635 3c3f3a39 282b2e2d 24272221  0365<?:9(+.-$'"!
+ 4a90 60636665 6c6f6a69 787b7e7d 74777271  `cfelojix{~}twrq
+ 4aa0 50535655 5c5f5a59 484b4e4d 44474241  PSVU\_ZYHKNMDGBA
+ 4ab0 c0c3c6c5 cccfcac9 d8dbdedd d4d7d2d1  ................
+ 4ac0 f0f3f6f5 fcfffaf9 e8ebeeed e4e7e2e1  ................
+ 4ad0 a0a3a6a5 acafaaa9 b8bbbebd b4b7b2b1  ................
+ 4ae0 90939695 9c9f9a99 888b8e8d 84878281  ................
+ 4af0 9b989d9e 97949192 83808586 8f8c898a  ................
+ 4b00 aba8adae a7a4a1a2 b3b0b5b6 bfbcb9ba  ................
+ 4b10 fbf8fdfe f7f4f1f2 e3e0e5e6 efece9ea  ................
+ 4b20 cbc8cdce c7c4c1c2 d3d0d5d6 dfdcd9da  ................
+ 4b30 5b585d5e 57545152 43404546 4f4c494a  [X]^WTQRC@EFOLIJ
+ 4b40 6b686d6e 67646162 73707576 7f7c797a  khmngdabspuv.|yz
+ 4b50 3b383d3e 37343132 23202526 2f2c292a  ;8=>7412# %&/,)*
+ 4b60 0b080d0e 07040102 13101516 1f1c191a  ................
+ 4b70 637c777b f26b6fc5 3001672b fed7ab76  c|w{.ko.0.g+...v
+ 4b80 ca82c97d fa5947f0 add4a2af 9ca472c0  ...}.YG.......r.
+ 4b90 b7fd9326 363ff7cc 34a5e5f1 71d83115  ...&6?..4...q.1.
+ 4ba0 04c723c3 1896059a 071280e2 eb27b275  ..#..........'.u
+ 4bb0 09832c1a 1b6e5aa0 523bd6b3 29e32f84  ..,..nZ.R;..)./.
+ 4bc0 53d100ed 20fcb15b 6acbbe39 4a4c58cf  S... ..[j..9JLX.
+ 4bd0 d0efaafb 434d3385 45f9027f 503c9fa8  ....CM3.E...P<..
+ 4be0 51a3408f 929d38f5 bcb6da21 10fff3d2  Q.@...8....!....
+ 4bf0 cd0c13ec 5f974417 c4a77e3d 645d1973  ...._.D...~=d].s
+ 4c00 60814fdc 222a9088 46eeb814 de5e0bdb  `.O."*..F....^..
+ 4c10 e0323a0a 4906245c c2d3ac62 9195e479  .2:.I.$\...b...y
+ 4c20 e7c8376d 8dd54ea9 6c56f4ea 657aae08  ..7m..N.lV..ez..
+ 4c30 ba78252e 1ca6b4c6 e8dd741f 4bbd8b8a  .x%.......t.K...
+ 4c40 703eb566 4803f60e 613557b9 86c11d9e  p>.fH...a5W.....
+ 4c50 e1f89811 69d98e94 9b1e87e9 ce5528df  ....i........U(.
+ 4c60 8ca1890d bfe64268 41992d0f b054bb16  ......BhA.-..T..
+ 4c70 01020408 10204080 1b36706c 61696e74  ..... @..6plaint
+ 4c80 65787420 28313620 62797465 73293f0a  ext (16 bytes)?.
+ 4c90 006b6579 20283136 20627974 6573293f  .key (16 bytes)?
+ 4ca0 0a002050 6c61696e 74657874 3a200020  .. Plaintext: . 
+ 4cb0 20202020 20204b65 793a2000 43697068        Key: .Ciph
+ 4cc0 65727465 78743a20 002b2d2d 2d2d2d2d  ertext: .+------
+ 4cd0 2b2d2d2d 2d2d2d2d 2d2d2d2d 2b2d2d2d  +-----------+---
+ 4ce0 2d2d2d2d 2d2d2d2d 2b2d2d2d 2d2d2d2d  --------+-------
+ 4cf0 2d2d2d2d 2b2d2d2d 2d2d2d2d 2d2d2d2d  ----+-----------
+ 4d00 2b2d2d2d 2d2d2d2d 2d2d2d2d 2b0a007c  +-----------+..|
+ 4d10 20526f75 6e647c20 20537461 7274206f   Round|  Start o
+ 4d20 66207c20 20202041 66746572 20207c20  f |    After  | 
+ 4d30 20202041 66746572 20207c20 20202041     After  |    A
+ 4d40 66746572 20207c20 526f756e 64204b65  fter  | Round Ke
+ 4d50 79207c0a 007c4e75 6d626572 7c202020  y |..|Number|   
+ 4d60 526f756e 64202020 7c202053 75624279  Round   |  SubBy
+ 4d70 74657320 7c205368 69667452 6f777320  tes | ShiftRows 
+ 4d80 7c204d69 78436f6c 756d6e73 7c202020  | MixColumns|   
+ 4d90 56616c75 65202020 7c0a0020 696e7075  Value   |.. inpu
+ 4da0 74006f75 74707574 0000               t.output..      

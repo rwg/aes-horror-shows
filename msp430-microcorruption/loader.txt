@@ -1,0 +1,1 @@
+reset;let 43f6=4400;let 43fc=bb80;let 43fe=4400;let 4400=4031;let 4402=43f6;let 4404=4032;let 4406=8200;let 4408=4030;let 440a=10;let pc=4400;continue
